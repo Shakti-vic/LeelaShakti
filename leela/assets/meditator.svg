@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffe9c2" stop-opacity="0.5"/>
+      <stop offset="0.45" stop-color="#ff8fd0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ff8fd0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1650" stop-opacity="0.75"/>
+      <stop offset="0.6" stop-color="#241a66" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#140c3d" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe0ff" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#bfe0ff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="200" cy="100" r="120" fill="url(#halo)"/>
+  <g fill="url(#body)" stroke="url(#rim)" stroke-width="1.5">
+    <circle cx="200" cy="30" r="12"/>
+    <ellipse cx="200" cy="54" rx="26" ry="22"/>
+    <circle cx="200" cy="100" r="40"/>
+    <path d="M182 136 L218 136 L222 152 C262 158 292 172 300 205 L312 268 C318 300 326 330 340 352 C380 362 396 392 380 420 C350 455 260 468 200 468 C140 468 50 455 20 420 C4 392 20 362 60 352 C74 330 82 300 88 268 L100 205 C108 172 138 158 178 152 Z"/>
+  </g>
+</svg>

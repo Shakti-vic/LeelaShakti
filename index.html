@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<title>Rectangle Math</title>
+<!-- dense-tilings-v3: grids sized to numbers, real aspect ratio via JS pixels -->
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --ink: #2b2b46;
+    --card: #ffffff;
+    --cell: #f2f4fb;
+    --cell-line: #e6eaf7;
+    --pick: #6c8cff;
+    --done-1: #ffb23f;
+    --done-2: #56cfa0;
+    --done-3: #b58cff;
+    --done-4: #5ec8ff;
+    --done-5: #ff8fb1;
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: max(12px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom));
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, #eaf0ff 0%, #fdf2ff 55%, #eafcf6 100%);
+    user-select: none;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.2px;
+  }
+
+  #progress {
+    margin-top: -2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #7078a0;
+  }
+
+  #readout {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: 0 4px 14px rgba(80, 90, 160, 0.14);
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.2s;
+  }
+
+  /* Width/height are set in JS so Telegram/WebView cannot force a square. */
+  #board {
+    --cols: 10;
+    --rows: 4;
+    position: relative;
+    width: 320px;
+    height: 140px;
+    padding: 6px;
+    border-radius: 20px;
+    background: var(--card);
+    box-shadow: 0 12px 34px rgba(80, 90, 160, 0.18);
+    touch-action: none;
+  }
+
+  #cells {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    gap: 2px;
+  }
+
+  #cells div {
+    border-radius: 5px;
+    background: var(--cell);
+    border: 1px solid var(--cell-line);
+  }
+
+  .layer {
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+  }
+
+  .rect {
+    position: absolute;
+    border-radius: 10px;
+    transition: opacity 0.25s;
+  }
+
+  .rect.sel {
+    background: rgba(108, 140, 255, 0.28);
+    border: 3px solid var(--pick);
+  }
+
+  .rect.hint {
+    border: 3px dashed var(--pick);
+    background: rgba(108, 140, 255, 0.12);
+  }
+
+  .rect.solved {
+    animation: pop 0.35s ease-out;
+  }
+
+  .num {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: min(4.6vw, 22px);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .num.solved {
+    color: #fff;
+    animation: pop 0.35s ease-out;
+  }
+
+  .star {
+    position: absolute;
+    font-size: 20px;
+    animation: fly 0.75s ease-out forwards;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(0.82); }
+    60%  { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes fly {
+    0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.1); opacity: 0; }
+  }
+
+  #buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    padding: 12px 22px;
+    border: none;
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: 0 5px 14px rgba(80, 90, 160, 0.16);
+    cursor: pointer;
+    transition: transform 0.12s, opacity 0.2s;
+  }
+
+  button:active { transform: scale(0.95); }
+
+  #next {
+    color: #fff;
+    background: linear-gradient(135deg, #56cfa0, #3fb6d8);
+  }
+
+  #next:disabled {
+    opacity: 0.4;
+    background: #c9cee3;
+    cursor: default;
+  }
+</style>
+</head>
+<body>
+
+<h1>Make the rectangles!</h1>
+<div id="progress">Board 1 of 6</div>
+<div id="readout">Drag around a number</div>
+
+<div id="board">
+  <div id="cells"></div>
+  <div class="layer" id="rects"></div>
+  <div class="layer" id="nums"></div>
+  <div class="layer" id="stars"></div>
+</div>
+
+<div id="buttons">
+  <button id="hint">Hint</button>
+  <button id="restart">Restart</button>
+  <button id="next" disabled>Next</button>
+</div>
+
+<script>
+/* Each board sizes its own grid to the numbers so every cell is used.
+   Target: value, label cell, intended [row, col, height, width].
+   Boards are mirrored / rotated on load so the shapes move around.
+   Build: dense-tilings-v3 */
+const LEVELS = /*TEST_DATA_START*/[
+  {
+    "table": 4,
+    "rows": 4,
+    "cols": 10,
+    "targets": [
+      {"value": 16, "row": 1, "col": 1, "rect": [0, 0, 4, 4], "color": "var(--done-1)"},
+      {"value": 8,  "row": 0, "col": 5, "rect": [0, 4, 2, 4], "color": "var(--done-2)"},
+      {"value": 4,  "row": 0, "col": 8, "rect": [0, 8, 2, 2], "color": "var(--done-3)"},
+      {"value": 12, "row": 2, "col": 6, "rect": [2, 4, 2, 6], "color": "var(--done-4)"}
+    ]
+  },
+  {
+    "table": 5,
+    "rows": 7,
+    "cols": 10,
+    "targets": [
+      {"value": 25, "row": 2, "col": 2, "rect": [0, 0, 5, 5], "color": "var(--done-1)"},
+      {"value": 15, "row": 2, "col": 6, "rect": [0, 5, 5, 3], "color": "var(--done-2)"},
+      {"value": 10, "row": 2, "col": 8, "rect": [0, 8, 5, 2], "color": "var(--done-3)"},
+      {"value": 20, "row": 5, "col": 4, "rect": [5, 0, 2, 10], "color": "var(--done-4)"}
+    ]
+  },
+  {
+    "table": 6,
+    "rows": 9,
+    "cols": 10,
+    "targets": [
+      {"value": 36, "row": 2, "col": 2, "rect": [0, 0, 6, 6], "color": "var(--done-1)"},
+      {"value": 18, "row": 7, "col": 2, "rect": [6, 0, 3, 6], "color": "var(--done-2)"},
+      {"value": 24, "row": 2, "col": 7, "rect": [0, 6, 6, 4], "color": "var(--done-3)"},
+      {"value": 12, "row": 7, "col": 7, "rect": [6, 6, 3, 4], "color": "var(--done-4)"}
+    ]
+  },
+  {
+    "table": 7,
+    "rows": 7,
+    "cols": 16,
+    "targets": [
+      {"value": 49, "row": 3, "col": 3, "rect": [0, 0, 7, 7], "color": "var(--done-1)"},
+      {"value": 21, "row": 3, "col": 8, "rect": [0, 7, 7, 3], "color": "var(--done-2)"},
+      {"value": 28, "row": 3, "col": 11, "rect": [0, 10, 7, 4], "color": "var(--done-3)"},
+      {"value": 14, "row": 3, "col": 14, "rect": [0, 14, 7, 2], "color": "var(--done-4)"}
+    ]
+  },
+  {
+    "table": 8,
+    "rows": 8,
+    "cols": 16,
+    "targets": [
+      {"value": 64, "row": 3, "col": 3, "rect": [0, 0, 8, 8], "color": "var(--done-1)"},
+      {"value": 32, "row": 3, "col": 9, "rect": [0, 8, 8, 4], "color": "var(--done-2)"},
+      {"value": 24, "row": 2, "col": 13, "rect": [0, 12, 6, 4], "color": "var(--done-3)"},
+      {"value": 8,  "row": 6, "col": 13, "rect": [6, 12, 2, 4], "color": "var(--done-4)"}
+    ]
+  },
+  {
+    "table": 9,
+    "rows": 9,
+    "cols": 15,
+    "targets": [
+      {"value": 81, "row": 4, "col": 4, "rect": [0, 0, 9, 9], "color": "var(--done-1)"},
+      {"value": 27, "row": 4, "col": 10, "rect": [0, 9, 9, 3], "color": "var(--done-2)"},
+      {"value": 18, "row": 2, "col": 13, "rect": [0, 12, 6, 3], "color": "var(--done-3)"},
+      {"value": 9,  "row": 7, "col": 13, "rect": [6, 12, 3, 3], "color": "var(--done-4)"}
+    ]
+  }
+]/*TEST_DATA_END*/;
+
+const board = document.getElementById("board");
+const cells = document.getElementById("cells");
+const rectLayer = document.getElementById("rects");
+const numLayer = document.getElementById("nums");
+const starLayer = document.getElementById("stars");
+const readout = document.getElementById("readout");
+const progress = document.getElementById("progress");
+const nextBtn = document.getElementById("next");
+
+let gridRows = LEVELS[0].rows;
+let gridCols = LEVELS[0].cols;
+let currentLevel = 0;
+let targets = [];
+const solved = [];
+let start = null;
+let selection = null;
+let hintTimer = null;
+
+const selEl = document.createElement("div");
+selEl.className = "rect sel";
+
+function place(el, r1, c1, r2, c2) {
+  el.style.left = `${(c1 / gridCols) * 100}%`;
+  el.style.top = `${(r1 / gridRows) * 100}%`;
+  el.style.width = `${((c2 - c1 + 1) / gridCols) * 100}%`;
+  el.style.height = `${((r2 - r1 + 1) / gridRows) * 100}%`;
+}
+
+function placeRect(el, [row, col, height, width]) {
+  place(el, row, col, row + height - 1, col + width - 1);
+}
+
+/* Explicit pixel size — do not rely on CSS aspect-ratio alone (breaks in some WebViews
+   and previously made a 4×10 tiling look like a huge empty square). */
+function sizeBoard(rows, cols) {
+  board.style.setProperty("--rows", String(rows));
+  board.style.setProperty("--cols", String(cols));
+
+  const maxW = Math.min(window.innerWidth * 0.96, 560);
+  const maxH = window.innerHeight * 0.58;
+  const cell = Math.max(14, Math.min(maxW / cols, maxH / rows));
+  board.style.width = `${Math.round(cell * cols)}px`;
+  board.style.height = `${Math.round(cell * rows)}px`;
+}
+
+function rebuildGrid(rows, cols) {
+  gridRows = rows;
+  gridCols = cols;
+  sizeBoard(rows, cols);
+  cells.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  cells.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  cells.textContent = "";
+  for (let i = 0; i < rows * cols; i++) cells.appendChild(document.createElement("div"));
+}
+
+function drawNumbers() {
+  numLayer.textContent = "";
+  for (const n of targets) {
+    const el = document.createElement("div");
+    el.className = "num";
+    el.textContent = n.value;
+    place(el, n.row, n.col, n.row, n.col);
+    numLayer.appendChild(el);
+    n.el = el;
+  }
+}
+
+function cellAt(event) {
+  const box = cells.getBoundingClientRect();
+  const col = Math.floor(((event.clientX - box.left) / box.width) * gridCols);
+  const row = Math.floor(((event.clientY - box.top) / box.height) * gridRows);
+  if (row < 0 || col < 0 || row >= gridRows || col >= gridCols) return null;
+  return { row, col };
+}
+
+function inRect(item, rect) {
+  return item.row >= rect.r1 && item.row <= rect.r2 && item.col >= rect.c1 && item.col <= rect.c2;
+}
+
+function overlaps(a, b) {
+  return a.r1 <= b.r2 && b.r1 <= a.r2 && a.c1 <= b.c2 && b.c1 <= a.c2;
+}
+
+function onDown(event) {
+  const cell = cellAt(event);
+  if (!cell) return;
+  board.setPointerCapture(event.pointerId);
+  clearHint();
+  start = cell;
+  onMove(event);
+}
+
+function onMove(event) {
+  if (!start) return;
+  const cell = cellAt(event);
+  if (!cell) return;
+
+  selection = {
+    r1: Math.min(start.row, cell.row),
+    r2: Math.max(start.row, cell.row),
+    c1: Math.min(start.col, cell.col),
+    c2: Math.max(start.col, cell.col),
+  };
+
+  const rows = selection.r2 - selection.r1 + 1;
+  const cols = selection.c2 - selection.c1 + 1;
+  place(selEl, selection.r1, selection.c1, selection.r2, selection.c2);
+  rectLayer.appendChild(selEl);
+  readout.style.color = "var(--ink)";
+  readout.textContent = `${rows} × ${cols} = ${rows * cols}`;
+}
+
+function onUp() {
+  if (!selection) return;
+  const rect = selection;
+  start = null;
+  selection = null;
+  selEl.remove();
+
+  const area = (rect.r2 - rect.r1 + 1) * (rect.c2 - rect.c1 + 1);
+  const inside = targets.filter((n) => !n.done && inRect(n, rect));
+  const clean = !solved.some((s) => overlaps(s, rect));
+  const target = inside.length === 1 && clean && inside[0].value === area ? inside[0] : null;
+
+  if (!target) {
+    readout.style.color = "#8a90ad";
+    readout.textContent = "Almost — try again 🙂";
+    return;
+  }
+
+  target.done = true;
+  solved.push(rect);
+
+  const el = document.createElement("div");
+  el.className = "rect solved";
+  el.style.background = target.color;
+  place(el, rect.r1, rect.c1, rect.r2, rect.c2);
+  rectLayer.appendChild(el);
+
+  target.el.classList.add("solved");
+  numLayer.appendChild(target.el);
+  burst(target.el);
+
+  const left = targets.filter((n) => !n.done).length;
+  readout.style.color = target.color;
+  readout.textContent = left ? `Nice! ${left} to go` : "All done! 🎉";
+  nextBtn.disabled = left > 0;
+}
+
+function burst(anchor) {
+  const box = anchor.getBoundingClientRect();
+  const layer = starLayer.getBoundingClientRect();
+  for (let i = 0; i < 7; i++) {
+    const star = document.createElement("div");
+    star.className = "star";
+    star.textContent = "⭐";
+    star.style.left = `${box.left - layer.left + box.width / 2}px`;
+    star.style.top = `${box.top - layer.top + box.height / 2}px`;
+    star.style.setProperty("--dx", `${(Math.random() - 0.5) * 160}px`);
+    star.style.setProperty("--dy", `${-40 - Math.random() * 90}px`);
+    star.addEventListener("animationend", () => star.remove());
+    starLayer.appendChild(star);
+  }
+}
+
+function clearHint() {
+  if (hintTimer) {
+    clearTimeout(hintTimer);
+    hintTimer = null;
+  }
+  for (const el of rectLayer.querySelectorAll(".rect.hint")) el.remove();
+}
+
+function showHint() {
+  clearHint();
+  const target = targets.find((n) => !n.done);
+  if (!target) return;
+
+  const el = document.createElement("div");
+  el.className = "rect hint";
+  placeRect(el, target.rect);
+  rectLayer.appendChild(el);
+  readout.style.color = "var(--pick)";
+  readout.textContent = "Try this shape";
+  hintTimer = setTimeout(clearHint, 1200);
+}
+
+function saveProgress(index) {
+  try {
+    localStorage.setItem("rectangleMathLevel", String(index));
+  } catch (_) {
+    /* progress saving is optional */
+  }
+}
+
+function readProgress() {
+  try {
+    const value = Number.parseInt(localStorage.getItem("rectangleMathLevel") ?? "0", 10);
+    if (Number.isNaN(value)) return 0;
+    return Math.max(0, Math.min(LEVELS.length - 1, value));
+  } catch (_) {
+    return 0;
+  }
+}
+
+/* Mirrors and rotates a board. For non-square boards, a diagonal flip
+   also swaps the grid's rows and cols so everything still fits. */
+function shuffleLayout(level) {
+  const flipDiagonal = Math.random() < 0.5;
+  const flipLeftRight = Math.random() < 0.5;
+  const flipUpDown = Math.random() < 0.5;
+
+  let rows = level.rows;
+  let cols = level.cols;
+  if (flipDiagonal) [rows, cols] = [cols, rows];
+
+  const moved = level.targets.map((target) => {
+    let [row, col, height, width] = target.rect;
+    let labelRow = target.row;
+    let labelCol = target.col;
+
+    if (flipDiagonal) {
+      [row, col] = [col, row];
+      [height, width] = [width, height];
+      [labelRow, labelCol] = [labelCol, labelRow];
+    }
+    if (flipLeftRight) {
+      col = cols - col - width;
+      labelCol = cols - 1 - labelCol;
+    }
+    if (flipUpDown) {
+      row = rows - row - height;
+      labelRow = rows - 1 - labelRow;
+    }
+
+    return { ...target, row: labelRow, col: labelCol, rect: [row, col, height, width] };
+  });
+
+  return { rows, cols, targets: moved };
+}
+
+function loadBoard(index) {
+  clearHint();
+  currentLevel = index;
+  const layout = shuffleLayout(LEVELS[index]);
+  rebuildGrid(layout.rows, layout.cols);
+  targets = layout.targets.map((target) => ({ ...target, done: false }));
+  solved.length = 0;
+  start = null;
+  selection = null;
+  selEl.remove();
+  rectLayer.textContent = "";
+  starLayer.textContent = "";
+
+  drawNumbers();
+  progress.textContent = `Board ${index + 1} of ${LEVELS.length}`;
+  readout.style.color = "var(--ink)";
+  readout.textContent = "Drag around a number";
+  nextBtn.disabled = true;
+}
+
+function goNext() {
+  if (targets.some((n) => !n.done)) return;
+
+  if (currentLevel >= LEVELS.length - 1) {
+    readout.style.color = "var(--pick)";
+    readout.textContent = "You finished every board! 🎉";
+    nextBtn.disabled = true;
+    return;
+  }
+
+  const nextIndex = currentLevel + 1;
+  saveProgress(nextIndex);
+  loadBoard(nextIndex);
+}
+
+board.addEventListener("pointerdown", onDown);
+board.addEventListener("pointermove", onMove);
+board.addEventListener("pointerup", onUp);
+board.addEventListener("pointercancel", onUp);
+document.getElementById("hint").addEventListener("click", showHint);
+document.getElementById("restart").addEventListener("click", () => loadBoard(currentLevel));
+nextBtn.addEventListener("click", goNext);
+window.addEventListener("resize", () => sizeBoard(gridRows, gridCols));
+
+loadBoard(readProgress());
+</script>
+
+</body>
+</html>

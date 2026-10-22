@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#120a33" />
+  <title>Leela</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap&subset=cyrillic" />
+  <link rel="stylesheet" href="board.css" />
+</head>
+<body>
+  <img class="cosmos" src="assets/kailash-shiva.svg" alt="" aria-hidden="true" />
+  <div class="dust" aria-hidden="true"></div>
+  <div class="page">
+    <header class="glass">
+      <div class="brand">
+        <h1 id="title">Leela</h1>
+        <p class="eyebrow" id="eyebrow"></p>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="guide-toggle" type="button"></button>
+        <button class="btn" id="sound-toggle" type="button"></button>
+        <button class="btn" id="lang-toggle" type="button">Русский</button>
+        <button class="btn" id="rules-open" type="button">Rules</button>
+        <button class="btn primary" id="new-game" type="button">New journey</button>
+      </div>
+    </header>
+    <main class="shell">
+      <section class="board-card glass">
+        <div class="board-layout">
+          <div class="planes" id="plane-labels"></div>
+          <div class="grid-wrap">
+            <div id="grid"></div>
+            <svg id="links" aria-hidden="true"></svg>
+          </div>
+        </div>
+        <p class="legend" id="legend"></p>
+      </section>
+      <aside class="glass" id="panel"></aside>
+    </main>
+  </div>
+  <dialog id="rules-dialog"></dialog>
+  <script src="content.js"></script>
+  <script src="rules.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
