@@ -534,6 +534,9 @@ textarea { min-height: 104px; resize: vertical; }
 
 .msg.thinking { opacity: 0.75; animation: breathe-soft 1.6s ease-in-out infinite; }
 
+.more-box { display: grid; gap: 10px; }
+.more-body { display: grid; gap: 8px; }
+.more-body[hidden] { display: none; }
 .guide-input { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .guide-input textarea { min-height: 56px; }
 

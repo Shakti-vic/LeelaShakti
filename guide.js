@@ -62,13 +62,14 @@ function cleanRequest(body) {
 function systemPrompt(lang) {
   const language = lang === "ru" ? "Russian" : "English";
   return [
-    "You are a calm, warm guide for Leela, the traditional Indian game of self-knowledge.",
-    "The player holds a personal question. Each square they land on is a mirror for that question, not a prediction.",
-    "Reply in " + language + " only, in 2 to 4 short sentences.",
-    "Reflect back what the player said in your own words, connect it gently to the square's meaning, then ask exactly one open question.",
-    "Never predict the future, diagnose, give medical, legal or financial advice, or claim spiritual authority.",
-    "If the player mentions self-harm or a crisis, gently suggest talking to someone they trust or a local helpline, and stop the game reflection.",
-    "Use the Sanskrit square name once if it helps. No lists, no headings, no emojis."
+    "You are sitting with one player of Leela, the Indian game of self-knowledge. You are a warm, attentive person, not a questionnaire.",
+    "Reply in " + language + " only.",
+    "The player's latest message is the center of the reply. Repeat their situation in your own words and name the feeling you hear. Do not replace it with a prepared question.",
+    "Bring in the square only where it genuinely meets what they just said. If they already answered the square's question, do not ask it again.",
+    "Ask at most one question, and only one that follows from their last sentence.",
+    "Write four to seven sentences of ordinary conversation. No lists, no headings, no emojis.",
+    "Never predict the future, diagnose, or give medical, legal, or financial advice, and do not claim spiritual authority.",
+    "If the player mentions self-harm or a crisis, gently suggest talking to someone they trust or a local helpline, and stop the game reflection."
   ].join(" ");
 }
 
@@ -170,4 +171,6 @@ async function reply(body, env, fetchImpl) {
   return { provider: provider, reply: text };
 }
 
-module.exports = { providers, cleanRequest, conversation, reply };
+const api = { providers: providers, cleanRequest: cleanRequest, conversation: conversation, reply: reply };
+if (typeof module === "object" && module.exports) module.exports = api;
+if (typeof window !== "undefined") window.LeelaGuide = api;

@@ -68,9 +68,11 @@
     if (position === 0 && parsed.sixes === 0) {
       return Object.assign({ kind: "wait", position: 0 }, parsed);
     }
-    const land = position + parsed.total;
-    if (land > 72) {
-      return Object.assign({ kind: "burn", position: position }, parsed);
+    let land = position + parsed.total;
+    let wrapped = false;
+    while (land > 72) {
+      wrapped = true;
+      land = 51 + (land - 72);
     }
     const link = linkFrom(land);
     return Object.assign({
@@ -80,6 +82,7 @@
       link: link,
       win: land === 68 && !link,
       born: position === 0,
+      wrapped: wrapped,
       crossed: position > 0 && position < 68 && land > 68
     }, parsed);
   }

@@ -58,13 +58,7 @@
     render();
     sound.soft();
   });
-  guideButton.addEventListener("click", function () {
-    const options = ["offline"].concat(aiProviders);
-    state.guideMode = options[(options.indexOf(guideMode()) + 1) % options.length];
-    save();
-    render();
-    sound.soft();
-  });
+  guideButton.addEventListener("click", openGuide);
   rulesButton.addEventListener("click", openRules);
   newButton.addEventListener("click", newGame);
   dialog.addEventListener("click", function (event) {
@@ -306,6 +300,7 @@
     if (result.born) return "born";
     if (result.crossed) return "passed";
     if (result.win) return "winNote";
+    if (result.wrapped) return "returned";
     if (result.link && result.link.type === "arrow") return "arrowNote";
     if (result.link && result.link.type === "snake") return "snakeNote";
     return "";
@@ -393,10 +388,17 @@
     state.lit = null;
   }
 
+  function browserKey() {
+    try { return (localStorage.getItem("leela-gemini-key") || "").trim(); }
+    catch (error) { return ""; }
+  }
+
   function guideMode() {
     if (state.guideMode === "offline") return "offline";
-    if (aiProviders.indexOf(state.guideMode) !== -1) return state.guideMode;
-    return aiProviders[0] || "offline";
+    if (state.guideMode === "openai" && aiProviders.indexOf("openai") !== -1) return "openai";
+    if (browserKey() || aiProviders.indexOf("gemini") !== -1) return "gemini";
+    if (aiProviders[0]) return aiProviders[0];
+    return "offline";
   }
 
   function guideText() {
@@ -451,10 +453,16 @@
   }
 
   function askGuide(payload) {
+    const body = Object.assign({ provider: guideMode(), lang: state.lang }, payload);
+    if (body.provider === "gemini" && browserKey() && window.LeelaGuide) {
+      return window.LeelaGuide.reply(body, { GEMINI_API_KEY: browserKey() }, fetch).then(function (result) {
+        return result.reply;
+      });
+    }
     return fetch("/api/guide", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.assign({ provider: guideMode(), lang: state.lang }, payload))
+      body: JSON.stringify(body)
     }).then(function (response) {
       return response.json().then(function (data) {
         if (!response.ok || !data.reply) throw new Error(data.error || "Guide failed");
@@ -790,6 +798,7 @@
     });
     if (guideBusy) list.appendChild(paragraph("msg guide thinking", t("listening")));
     box.appendChild(list);
+    if (guideMode() === "offline") box.appendChild(paragraph("hint", t("guideNeed")));
     const row = div("guide-input");
     const input = document.createElement("textarea");
     input.rows = 2;
@@ -910,11 +919,51 @@
     title.append(badge, document.createTextNode(nameOf(id)));
     article.appendChild(title);
     article.appendChild(paragraph("meaning", info[0]));
+    if (withAsk) {
+      article.appendChild(paragraph("hint", t("mapHint")));
+      return article;
+    }
     article.appendChild(paragraph("quote", info[1]));
-    if (withAsk) article.appendChild(paragraph("ask", cell(id).ask[state.lang === "ru" ? 1 : 0]));
+    article.appendChild(moreBlock(id));
     const plane = Math.ceil(id / 9);
     article.appendChild(paragraph("hint", t("plane") + " " + String(plane) + " · " + content.planes[plane - 1][state.lang]));
     return article;
+  }
+
+  function detailOf(id) {
+    return (window.LEELA_DETAILS && window.LEELA_DETAILS[id]) || (content.details && content.details[id]) || null;
+  }
+
+  function moreBlock(id) {
+    const detail = detailOf(id);
+    const box = div("more-box");
+    const body = div("more-body");
+    body.hidden = true;
+    if (detail) {
+      const lang = state.lang === "ru" ? "ru" : "en";
+      const story = detail[lang].story;
+      (Array.isArray(story) ? story : [story]).forEach(function (line) {
+        body.appendChild(paragraph("quote", line));
+      });
+      body.appendChild(paragraph("meaning", t("inLife")));
+      body.appendChild(paragraph("quote", detail[lang].life));
+    }
+    body.appendChild(paragraph("meaning", t("onBoard")));
+    body.appendChild(paragraph("quote", boardSentence(id)));
+    const toggle = button(t("more"), function () {
+      body.hidden = !body.hidden;
+      toggle.textContent = body.hidden ? t("more") : t("less");
+    }, "btn");
+    box.append(toggle, body);
+    return box;
+  }
+
+  function boardSentence(id) {
+    const link = rules.linkFrom(id);
+    const plane = Math.ceil(id / 9);
+    const where = fill(t("onPlane"), { plane: plane, planeName: content.planes[plane - 1][state.lang] });
+    if (!link) return where;
+    return fill(t(link.type === "arrow" ? "arrowTo" : "snakeTo"), { to: link.to, name: nameOf(link.to) }) + " " + where;
   }
 
   function history() {
@@ -995,6 +1044,43 @@
     element.className = className;
     element.textContent = text;
     return element;
+  }
+
+  function openGuide() {
+    dialog.replaceChildren();
+    const input = document.createElement("input");
+    input.type = "password";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("aria-label", t("guideKey"));
+    const saveKey = button(t("guideSave"), function () {
+      const value = input.value.trim();
+      if (!value && !browserKey()) {
+        state.noticeKey = "guideMissing";
+        return;
+      }
+      if (value) localStorage.setItem("leela-gemini-key", value);
+      state.guideMode = "gemini";
+      state.noticeKey = "";
+      save();
+      dialog.close();
+      render();
+    }, "btn primary");
+    const offline = button(t("guideKeepOffline"), function () {
+      state.guideMode = "offline";
+      save();
+      dialog.close();
+      render();
+    }, "btn");
+    dialog.append(
+      heading(t("guideName")),
+      paragraph("hint", t("guideHint")),
+      browserKey() ? paragraph("hint", t("guideSaved")) : paragraph("hint", t("guideNeed")),
+      field(t("guideKey"), "", function () {}, "text")
+    );
+    dialog.lastChild.querySelector("input").replaceWith(input);
+    dialog.append(saveKey, offline);
+    dialog.showModal();
   }
 
   function openRules() {

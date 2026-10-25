@@ -56,6 +56,7 @@ window.LEELA_CONTENT = {
       burned: "Three sixes fade. Only the last number remains.",
       stay: "Not yet. The journey opens on a six.",
       fade: "This number cannot be played past the last square, so the throw fades.",
+      returned: "The count passed 72. The snake returns you to Earth, and the remaining steps continue from there.",
       born: "The question enters the board.",
       passed: "The count goes past the goal, into the higher planes.",
       followArrow: "Follow the arrow",
@@ -95,13 +96,27 @@ window.LEELA_CONTENT = {
       guideOffline: "✦ Guide: offline",
       guideOpenai: "✦ Guide: OpenAI",
       guideGemini: "✦ Guide: Gemini",
-      guideHint: "To talk with an AI guide, add an OpenAI or Gemini key to the .env file next to server.js and restart it.",
+      guideHint: "A Gemini key lets the guide answer what you actually write. It stays on this device and is not uploaded.",
+      guideNeed: "These are prepared questions. They do not follow your words. Save a Gemini key and the guide will answer what you say.",
+      guideKey: "Gemini key",
+      guideSave: "Use Gemini for this conversation",
+      guideKeepOffline: "Keep the prepared questions",
+      guideSaved: "A key is already saved on this device. Paste a new one only if you want to replace it.",
+      guideMissing: "Paste the Gemini key first.",
       answer: "Your answer",
       send: "Send",
       listening: "The guide is listening…",
       guideDown: "The AI guide is not reachable right now, so the offline guide continues.",
       closingAsk: "✦ Ask the guide for a closing reflection",
-      continueOn: "Continue"
+      continueOn: "Continue",
+      more: "More about this square",
+      less: "Show less",
+      onBoard: "On the board",
+      inLife: "In everyday life",
+      mapHint: "The full reading opens when your token lands here.",
+      arrowTo: "An arrow here lifts you to {to}, {name}.",
+      snakeTo: "A snake here takes you down to {to}, {name}.",
+      onPlane: "It sits on plane {plane}, {planeName}."
     },
     ru: {
       title: "Лила",
@@ -122,6 +137,7 @@ window.LEELA_CONTENT = {
       burned: "Три шестёрки сгорают. Остаётся только последнее число.",
       stay: "Ещё не время. Путь открывается шестёркой.",
       fade: "Это число нельзя сыграть дальше последней клетки, и бросок сгорает.",
+      returned: "Счёт прошёл 72. Змея возвращает вас на Землю, и оставшиеся шаги идут оттуда.",
       born: "Вопрос входит на поле.",
       passed: "Счёт проходит мимо цели и уводит на высшие планы.",
       followArrow: "Подняться по стреле",
@@ -161,13 +177,125 @@ window.LEELA_CONTENT = {
       guideOffline: "✦ Проводник: офлайн",
       guideOpenai: "✦ Проводник: OpenAI",
       guideGemini: "✦ Проводник: Gemini",
-      guideHint: "Чтобы говорить с ИИ-проводником, добавьте ключ OpenAI или Gemini в файл .env рядом с server.js и перезапустите сервер.",
+      guideHint: "Ключ Gemini позволяет проводнику отвечать на то, что вы написали. Он остаётся на этом устройстве и не публикуется.",
+      guideNeed: "Это заготовленные вопросы. Они не следуют за вашими словами. Сохраните ключ Gemini, и проводник будет отвечать на сказанное.",
+      guideKey: "Ключ Gemini",
+      guideSave: "Пусть Gemini ведёт этот разговор",
+      guideKeepOffline: "Оставить заготовленные вопросы",
+      guideSaved: "Ключ уже сохранён на этом устройстве. Вставьте новый, только если хотите заменить его.",
+      guideMissing: "Сначала вставьте ключ Gemini.",
       answer: "Ваш ответ",
       send: "Отправить",
       listening: "Проводник слушает…",
       guideDown: "ИИ-проводник сейчас недоступен, поэтому продолжает офлайн-проводник.",
       closingAsk: "✦ Попросить проводника о завершающем отражении",
-      continueOn: "Продолжить"
+      continueOn: "Продолжить",
+      more: "Подробнее об этой клетке",
+      less: "Свернуть",
+      onBoard: "На поле",
+      inLife: "В обычной жизни",
+      mapHint: "Полное описание откроется, когда ваша фишка остановится здесь.",
+      arrowTo: "Стрела отсюда поднимает вас на {to}, {name}.",
+      snakeTo: "Змея отсюда опускает вас на {to}, {name}.",
+      onPlane: "Клетка стоит на плане {plane}, «{planeName}»."
+    }
+  },
+  details: {
+    1: {
+      en: {
+        story: [
+          "Janma means birth. In Leela this is where a question first takes a body: you stop imagining it and start living it, inside a real time, a real place and real limits. Birth is not the start of perfection. It is the start of contact with the world, with other people and with consequences.",
+          "Arriving here can feel like relief or like shock. Something has become real, and it is small. The temptation is to judge it by what it might grow into. This square asks you to meet it as it is: fragile, alive, and yours to look after."
+        ],
+        life: "The first day in a new job, when you do not yet know where anything is, and that is exactly right."
+      },
+      ru: {
+        story: [
+          "Джанма значит рождение. В Лиле это место, где вопрос впервые обретает тело: вы перестаёте его воображать и начинаете им жить — в настоящем времени, в настоящем месте и с настоящими границами. Рождение — не начало совершенства. Это начало встречи с миром, с другими людьми и с последствиями.",
+          "Прийти сюда можно с облегчением или с испугом. Что-то стало настоящим, и оно пока маленькое. Хочется судить о нём по тому, чем оно может стать. Эта клетка просит встретить его таким, какое оно есть: хрупким, живым и требующим вашей заботы."
+        ],
+        life: "Первый день на новой работе, когда вы ещё не знаете, где что лежит, и это совершенно нормально."
+      }
+    },
+    6: {
+      en: {
+        story: [
+          "Moha is the fog of attachment. We hold a person, a plan or an image of ourselves so tightly that we can no longer see it clearly. In the traditional game every journey enters the board through this square, as if to say that confusion is not a failure but the ordinary place to begin.",
+          "Delusion is convincing because it feels like certainty. The way through is not to fight the fog but to notice it: to say “I don’t know yet”, and take the one step you can actually see."
+        ],
+        life: "Being sure a friend is angry with you, and building a whole evening around that story before you have asked them."
+      },
+      ru: {
+        story: [
+          "Моха — это туман привязанности. Мы держим человека, план или образ себя так крепко, что перестаём ясно его видеть. В традиционной игре каждый путь входит на поле через эту клетку, будто говоря: путаница — не провал, а обычное место для начала.",
+          "Заблуждение убедительно, потому что ощущается как уверенность. Выход не в том, чтобы бороться с туманом, а в том, чтобы его заметить: сказать «я пока не знаю» и сделать тот один шаг, который действительно виден."
+        ],
+        life: "Быть уверенной, что подруга на вас обижена, и выстроить вокруг этой истории целый вечер, так и не спросив её."
+      }
+    },
+    12: {
+      en: {
+        story: [
+          "Irshya is envy: the pain of seeing someone else have what you want. It rarely shows itself honestly. It arrives as criticism, as “that’s not fair”, or as a sudden loss of interest in your own work.",
+          "On this board envy is a snake. It takes you down to Matsarya, avarice, because envy and holding back are close relatives: when we feel others have taken our share, we start to grip what we have. Yet envy carries a gift. It points straight at a wish you have not yet admitted."
+        ],
+        life: "Scrolling past a colleague’s success and suddenly feeling that your own day is worth nothing."
+      },
+      ru: {
+        story: [
+          "Ирашья — это зависть: боль от того, что у другого есть то, чего хотите вы. Она редко показывается честно. Она приходит как критика, как «это несправедливо» или как внезапная потеря интереса к собственному делу.",
+          "На этом поле зависть — змея. Она уводит вниз, на Матсарью, скупость, потому что зависть и удержание — близкие родственники: когда кажется, что другие забрали нашу долю, мы начинаем цепляться за своё. И всё же в зависти есть дар. Она прямо указывает на желание, которое вы ещё не признали."
+        ],
+        life: "Пролистать новость об успехе коллеги и вдруг почувствовать, что ваш собственный день ничего не стоит."
+      }
+    },
+    36: {
+      en: {
+        story: [
+          "Svaccha means clear and transparent, like still water. It comes after the turbulence of the lower planes: the mud settles, and what was always there becomes visible.",
+          "Clarity is not always pleasant. You may see a decision you have been avoiding, or a truth about a relationship. But clear seeing is restful in its own way. You stop spending energy on not knowing."
+        ],
+        life: "The morning after a long argument, when you suddenly see what it was really about."
+      },
+      ru: {
+        story: [
+          "Сваччха значит ясный, прозрачный, как спокойная вода. Она приходит после волнения нижних планов: муть оседает, и становится видно то, что было там всегда.",
+          "Ясность не всегда приятна. Можно увидеть решение, которого вы избегали, или правду об отношениях. Но ясное видение по-своему даёт отдых: вы перестаёте тратить силы на то, чтобы не знать."
+        ],
+        life: "Утро после долгой ссоры, когда вдруг становится видно, о чём она была на самом деле."
+      }
+    },
+    54: {
+      en: {
+        story: [
+          "Bhakti is devotion: love turned toward something larger than your own plans. It may be a person, a practice, life itself, or the divine as you understand it. It is not a sweet mood but a direction of the heart.",
+          "In Leela this is the only arrow that leads straight home to 68. The game seems to say that knowledge and effort can take you far, but love carries you the last step. Devotion cannot be performed for an audience; it shows in what you do when nobody is watching."
+        ],
+        life: "Caring for someone through an illness, not because you have to, but because they matter to you."
+      },
+      ru: {
+        story: [
+          "Бхакти — это преданность: любовь, обращённая к чему-то большему, чем собственные планы. Это может быть человек, практика, сама жизнь или божественное, как вы его понимаете. Это не сладкое настроение, а направление сердца.",
+          "В Лиле это единственная стрела, которая ведёт прямо домой, на 68. Игра будто говорит: знание и усилие уводят далеко, но последний шаг делает любовь. Преданность нельзя сыграть для зрителей; она видна в том, что вы делаете, когда никто не смотрит."
+        ],
+        life: "Ухаживать за близким во время болезни не потому, что так положено, а потому, что он вам дорог."
+      }
+    },
+    68: {
+      en: {
+        story: [
+          "Vaikuntha is the realm of cosmic consciousness: the place where the journey began and where it returns. Every token waits here before its first six, and the game ends only by landing on this square exactly.",
+          "Arriving here is not a prize for being good. It is a homecoming, the moment when the question is no longer held by a tense, searching self, and rests in a wider awareness. What you carry back into ordinary life is the real answer."
+        ],
+        life: "Coming home after a long journey and seeing your own room with new eyes."
+      },
+      ru: {
+        story: [
+          "Вайкунтха — мир космического сознания: место, откуда путь начался и куда он возвращается. Каждая фишка ждёт здесь своей первой шестёрки, и игра заканчивается только точным попаданием на эту клетку.",
+          "Прийти сюда — не награда за хорошее поведение. Это возвращение домой, момент, когда вопрос больше не держит напряжённое, ищущее «я», и он покоится в более широком осознании. То, что вы унесёте отсюда в обычную жизнь, и есть настоящий ответ."
+        ],
+        life: "Вернуться домой после долгого путешествия и увидеть свою комнату новыми глазами."
+      }
     }
   },
   guide: {
@@ -201,7 +329,7 @@ window.LEELA_CONTENT = {
       "Three sixes in a row fade, and only the following number is played. Four or more sixes all count.",
       "At the opening, one six takes you to 6, Delusion, and the extra number continues from there. Three faded sixes followed by 1 place you on 1, Birth.",
       "An arrow is taken upward and a snake downward. Read both squares. The only arrow that finishes the game runs from 54, Devotion, to 68.",
-      "The game ends only by landing exactly on 68. A count beyond it enters 69–72. A throw past 72 fades. Square 72 returns you by snake to 51, Earth.",
+      "The game ends only by landing exactly on 68. Squares 65 and 67 do not finish it. A count beyond 68 enters 69–72. A throw past 72 climbs to 72, the snake returns you to 51, Earth, and the remaining steps continue from there.",
       "There is no ranking. When the game has begun, finish it. Write what each stop brings up."
     ],
     ru: [
@@ -210,7 +338,7 @@ window.LEELA_CONTENT = {
       "Три шестёрки подряд сгорают, и играется только следующее число. Четыре шестёрки и больше все считаются.",
       "В начале одна шестёрка приводит на 6, «Заблуждение», а лишнее число идёт дальше. Три сгоревшие шестёрки и единица ставят вас на 1, «Рождение».",
       "По стреле поднимаются, по змее спускаются. Читают обе клетки. Единственная стрела, которая завершает игру, ведёт с 54, «Преданность», на 68.",
-      "Игра заканчивается только точным попаданием на 68. Счёт дальше уводит на 69–72. Бросок за 72 сгорает. Клетка 72 возвращает змеёй на 51, «Земля».",
+      "Игра заканчивается только точным попаданием на 68. Клетки 65 и 67 её не заканчивают. Счёт дальше 68 уводит на 69–72. Бросок за 72 доходит до 72, змея возвращает на 51, «Земля», и оставшиеся шаги идут оттуда.",
       "Здесь нет победителя. Начатую игру завершают. Записывают, что поднимает каждая остановка."
     ]
   },
