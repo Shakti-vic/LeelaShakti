@@ -316,7 +316,22 @@
     });
   }
 
+  function reflectionReady() {
+    if (!state.reading || state.reading.result.kind === "burn") return true;
+    if (guideBusy) return false;
+    const said = state.chat.some(function (message) {
+      return message.role === "player" && message.text.trim().length >= 8;
+    });
+    const last = state.chat[state.chat.length - 1];
+    return said && last && last.role === "guide";
+  }
+
   function follow() {
+    if (!reflectionReady()) {
+      state.noticeKey = "reflectFirst";
+      render();
+      return;
+    }
     if (state.phase !== "link" || !state.reading) return;
     const player = currentPlayer();
     const step = rules.followLink(state.reading.square);
@@ -349,6 +364,11 @@
   }
 
   function continueTurn() {
+    if (!reflectionReady()) {
+      state.noticeKey = "reflectFirst";
+      render();
+      return;
+    }
     if (state.phase !== "read" || !state.reading) return;
     const player = currentPlayer();
     snapshot();
@@ -777,13 +797,17 @@
       panel.appendChild(guideBox());
     }
     const actions = div("actions");
+    let moveLabel = t("next");
+    let move = continueTurn;
     if (state.phase === "link") {
       const link = rules.linkFrom(state.reading.square);
-      const label = link.type === "arrow" ? "↑ " + t("followArrow") : "↓ " + t("followSnake");
-      actions.appendChild(button(label, follow, "roll-btn"));
-    } else {
-      actions.appendChild(button(t("next"), continueTurn, "roll-btn"));
+      moveLabel = (link.type === "arrow" ? "↑ " + t("followArrow") : "↓ " + t("followSnake"));
+      move = follow;
     }
+    const moveOn = button(moveLabel, move, "roll-btn");
+    moveOn.disabled = !reflectionReady();
+    actions.appendChild(moveOn);
+    if (!reflectionReady() && state.reading.result.kind !== "burn") actions.appendChild(paragraph("hint", t("reflectFirst")));
     if (undoStack.length) actions.appendChild(button("↶ " + t("undo"), undo, "link-btn"));
     panel.appendChild(actions);
   }
