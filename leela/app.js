@@ -405,9 +405,40 @@
     state.lit = null;
   }
 
+  function cleanKey(value) {
+    return String(value || "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .trim()
+      .replace(/^['"]+|['"]+$/g, "")
+      .replace(/\s+/g, "");
+  }
+
+  function keyKind(value) {
+    const key = cleanKey(value);
+    if (key.indexOf("AQ.") === 0 && key.length >= 24) return "auth";
+    if (key.indexOf("AIza") === 0 && key.length >= 30) return "old";
+    if (!key) return "empty";
+    return "odd";
+  }
+
   function browserKey() {
-    try { return (localStorage.getItem("leela-gemini-key") || "").trim(); }
-    catch (error) { return ""; }
+    try {
+      const stored = localStorage.getItem("leela-gemini-key") || "";
+      const key = cleanKey(stored);
+      if (key && key !== stored) localStorage.setItem("leela-gemini-key", key);
+      return key;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function keyHint(value) {
+    const kind = keyKind(value);
+    const key = cleanKey(value);
+    if (kind === "auth") return t("guideKeyOk").replace("{count}", String(key.length));
+    if (kind === "old") return t("guideKeyOld");
+    if (kind === "odd") return t("guideKeyShape");
+    return "";
   }
 
   function guideMode() {
@@ -583,11 +614,16 @@
   }
 
   function faultText(error) {
-    return String(error && error.message || "")
+    const message = String(error && error.message || "")
       .replace(/AIza[0-9A-Za-z_-]+/g, "")
+      .replace(/AQ\.[0-9A-Za-z_-]+/g, "")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 160);
+    if (/API key not valid/i.test(message)) {
+      return keyKind(browserKey()) === "old" ? t("guideKeyOld") : t("guideKeyShape");
+    }
+    return message;
   }
 
   function liveMissed(chat) {
@@ -819,8 +855,8 @@
 
   function toast() {
     if (!state.noticeKey) return null;
-    const reason = state.noticeKey === "guideDown" && state.guideFault ? " " + state.guideFault : "";
-    return paragraph("toast", t(state.noticeKey) + reason);
+    if (state.noticeKey === "guideDown" && state.guideFault) return paragraph("toast", state.guideFault);
+    return paragraph("toast", t(state.noticeKey));
   }
 
   function renderSetup(panel) {
@@ -1149,14 +1185,23 @@
   function openGuide() {
     dialog.replaceChildren();
     const input = document.createElement("input");
-    input.type = "password";
+    input.type = "text";
     input.autocomplete = "off";
     input.spellcheck = false;
+    input.name = "leela-gemini-key";
     input.setAttribute("aria-label", t("guideKey"));
+    const check = paragraph("hint", keyHint(browserKey()));
+    input.addEventListener("input", function () {
+      check.textContent = keyHint(input.value);
+    });
     const saveKey = button(t("guideSave"), function () {
-      const value = input.value.trim();
+      const value = cleanKey(input.value);
       if (!value && !browserKey()) {
         state.noticeKey = "guideMissing";
+        return;
+      }
+      if (value && keyKind(value) === "odd" && value.length < 20) {
+        check.textContent = t("guideKeyShape");
         return;
       }
       if (value) localStorage.setItem("leela-gemini-key", value);
@@ -1175,10 +1220,11 @@
     dialog.append(
       heading(t("guideName")),
       paragraph("hint", t("guideHint")),
-      browserKey() ? paragraph("hint", t("guideSaved")) : paragraph("hint", t("guideNeed")),
-      field(t("guideKey"), "", function () {}, "text")
+      browserKey() ? paragraph("hint", keyHint(browserKey()) || t("guideSaved")) : paragraph("hint", t("guideNeed")),
+      field(t("guideKey"), "", function () {}, "text"),
+      check
     );
-    dialog.lastChild.querySelector("input").replaceWith(input);
+    dialog.querySelector("label input").replaceWith(input);
     dialog.append(saveKey, offline);
     dialog.showModal();
   }
