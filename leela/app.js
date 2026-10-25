@@ -1293,11 +1293,11 @@
     }, "btn");
     dialog.append(
       heading(t("rules")),
+      list,
+      paragraph("hint", t("guide")),
       paragraph("hint", t("guideHint")),
       steps,
       openKey,
-      list,
-      paragraph("hint", t("guide")),
       paragraph("hint credit", t("credit")),
       button(t("close"), function () { dialog.close(); }, "btn primary")
     );
