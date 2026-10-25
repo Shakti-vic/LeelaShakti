@@ -382,7 +382,8 @@
     state.chat = [];
     state.guideDraft = "";
     state.noticeKey = "";
-    if (player.done && state.players.every(function (item) { return item.done; })) {
+    const finished = player.done && state.players.every(function (item) { return item.done; });
+    if (finished) {
       state.phase = "over";
       state.reading = null;
       state.noticeKey = "allDone";
@@ -391,6 +392,7 @@
     }
     save();
     render();
+    if (finished) congrats();
   }
 
   function advance() {
@@ -933,18 +935,24 @@
       panel.appendChild(cellArticle(state.reading.square, label, false));
       panel.appendChild(guideBox());
     }
+    const finishing = state.phase === "read" && state.reading.square === 68 && player.position === 68;
     const actions = div("actions");
     let moveLabel = t("next");
     let move = continueTurn;
+    let ready = reflectionReady();
     if (state.phase === "link") {
       const link = rules.linkFrom(state.reading.square);
       moveLabel = (link.type === "arrow" ? "↑ " + t("followArrow") : "↓ " + t("followSnake"));
       move = follow;
+    } else if (finishing) {
+      moveLabel = "✦ " + t("finish") + " ✦";
+      ready = !guideBusy && answeredCount() >= 1;
+      actions.classList.add("finish");
     }
     const moveOn = button(moveLabel, move, "roll-btn");
-    moveOn.disabled = !reflectionReady();
+    moveOn.disabled = !ready;
     actions.appendChild(moveOn);
-    if (!reflectionReady() && state.reading.result.kind !== "burn") actions.appendChild(paragraph("hint", t("reflectFirst")));
+    if (!ready && state.reading.result.kind !== "burn") actions.appendChild(paragraph("hint", t("reflectFirst")));
     if (undoStack.length) actions.appendChild(button("↶ " + t("undo"), undo, "link-btn"));
     panel.appendChild(actions);
   }
@@ -1048,6 +1056,7 @@
 
   function renderSummary(panel) {
     panel.appendChild(heading(t("allDone")));
+    panel.appendChild(paragraph("hint", t("keptHere")));
     state.players.forEach(function (player) {
       const card = div("player-card stack");
       const row = div("row");
@@ -1242,9 +1251,20 @@
       dialog.close();
       render();
     }, "btn");
+    const steps = document.createElement("ol");
+    content.ui[state.lang].guideSteps.forEach(function (line) {
+      const item = document.createElement("li");
+      item.textContent = line;
+      steps.appendChild(item);
+    });
+    const openKey = button(t("guideOpenKey"), function () {
+      window.open("https://aistudio.google.com/apikey", "_blank", "noopener");
+    }, "btn");
     dialog.append(
       heading(t("guideName")),
       paragraph("hint", t("guideHint")),
+      steps,
+      openKey,
       browserKey() ? paragraph("hint", keyHint(browserKey()) || t("guideSaved")) : paragraph("hint", t("guideNeed")),
       field(t("guideKey"), "", function () {}, "text"),
       check
@@ -1262,8 +1282,20 @@
       item.textContent = line;
       list.appendChild(item);
     });
+    const steps = document.createElement("ol");
+    content.ui[state.lang].guideSteps.forEach(function (line) {
+      const item = document.createElement("li");
+      item.textContent = line;
+      steps.appendChild(item);
+    });
+    const openKey = button(t("guideOpenKey"), function () {
+      window.open("https://aistudio.google.com/apikey", "_blank", "noopener");
+    }, "btn");
     dialog.append(
       heading(t("rules")),
+      paragraph("hint", t("guideHint")),
+      steps,
+      openKey,
       list,
       paragraph("hint", t("guide")),
       paragraph("hint credit", t("credit")),
@@ -1340,6 +1372,15 @@
     window.setTimeout(function () {
       burst(window.innerWidth / 2, window.innerHeight / 3, { count: 90, spread: Math.min(window.innerWidth, 900) / 2, colors: GOLD.concat(MAGIC), ring: "#ffd98a" });
     }, 350);
+  }
+
+  function congrats() {
+    celebrate(68);
+    const veil = div("congrats");
+    veil.appendChild(heading(t("congrats")));
+    veil.appendChild(paragraph("hint", t("congratsNote")));
+    document.body.appendChild(veil);
+    window.setTimeout(function () { veil.remove(); }, 3200);
   }
 
   function make(tag, attributes, parent) {
