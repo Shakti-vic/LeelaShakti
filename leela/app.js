@@ -431,8 +431,20 @@
     });
   }
 
+  function journalFor(id) {
+    const book = window.LEELA_JOURNAL;
+    const lang = state.lang === "ru" ? "ru" : "en";
+    const lines = [];
+    const born = state.reading && state.reading.result && state.reading.result.born && state.reading.square === id;
+    if (born && book.entry) lines.push(book.entry[lang]);
+    if (book.cells[id] && book.cells[id][lang]) lines.push(book.cells[id][lang]);
+    return lines.concat(book.shared[lang]);
+  }
+
   function openChat(square) {
-    state.chat = [{ role: "guide", text: cell(square).ask[state.lang === "ru" ? 1 : 0] }];
+    state.chat = journalFor(square).map(function (line) {
+      return { role: "guide", text: line };
+    });
     state.guideDraft = "";
   }
 
@@ -450,7 +462,7 @@
       name: nameOf(id),
       meaning: textOf(id)[0],
       description: textOf(id)[1],
-      ask: cell(id).ask[state.lang === "ru" ? 1 : 0],
+      ask: journalFor(id).join(" "),
       link: link ? link.type : null
     };
   }
