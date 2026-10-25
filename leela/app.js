@@ -33,6 +33,7 @@
   let rolling = false;
   let aiProviders = [];
   let guideBusy = false;
+  let followGuide = false;
   const state = load() || fresh();
   if (state.sound === undefined) state.sound = true;
   if (!Array.isArray(state.chat)) state.chat = [];
@@ -570,6 +571,7 @@
     chat.push({ role: "player", text: text });
     state.guideDraft = "";
     state.noticeKey = "";
+    followGuide = true;
     if (guideMode() === "offline") {
       chat.push({ role: "guide", text: mirrorOffline(chat), kind: "reply" });
       save();
@@ -583,6 +585,7 @@
     askGuide({ mode: "square", name: player.name, question: player.question, square: squareInfo(square), path: pathInfo(player), chat: displayChat() })
       .then(function (reply) {
         guideBusy = false;
+        followGuide = true;
         state.guideFault = "";
         if (state.chat === chat) chat.push({ role: "guide", text: reply, kind: "reply" });
         save();
@@ -591,6 +594,7 @@
       })
       .catch(function (error) {
         guideBusy = false;
+        followGuide = true;
         state.noticeKey = "guideDown";
         state.guideFault = faultText(error);
         if (state.chat === chat) chat.push({ role: "guide", text: liveMissed(chat), kind: "error" });
@@ -734,7 +738,28 @@
     renderPlanes();
     renderBoard();
     renderPanel();
+    window.requestAnimationFrame(function () {
+      pinGuide();
+      window.requestAnimationFrame(function () {
+        pinGuide();
+        followGuide = false;
+      });
+    });
     window.requestAnimationFrame(drawLinks);
+  }
+
+  function pinGuide() {
+    const list = document.querySelector(".guide-chat");
+    if (list) list.scrollTop = list.scrollHeight;
+    const panel = document.getElementById("panel");
+    const row = document.querySelector(".guide-input");
+    if (panel && row) {
+      const extra = row.getBoundingClientRect().bottom - panel.getBoundingClientRect().bottom;
+      if (extra > 0) panel.scrollTop += extra + 12;
+    }
+    if (!followGuide) return;
+    const input = document.querySelector(".guide-input textarea");
+    if (input && !input.disabled) input.focus({ preventScroll: true });
   }
 
   function renderPlanes() {
