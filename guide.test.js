@@ -46,7 +46,7 @@ assert.strictEqual(quiet[quiet.length - 1].role, "user");
   const gemini = fakeFetch({ candidates: [{ content: { parts: [{ text: " Хорошо. " }] } }] });
   const geminiResult = await guide.reply(body, { GEMINI_API_KEY: "g", OPENAI_API_KEY: "o" }, gemini);
   assert.deepStrictEqual(geminiResult, { provider: "gemini", reply: "Хорошо." });
-  assert.ok(gemini.calls[0].url.includes("gemini-2.0-flash:generateContent"));
+  assert.ok(gemini.calls[0].url.includes("gemini-3.5-flash-lite:generateContent"));
   assert.strictEqual(gemini.calls[0].options.headers["x-goog-api-key"], "g");
   assert.ok(gemini.calls[0].body.systemInstruction.parts[0].text.includes("Russian"));
   assert.strictEqual(gemini.calls[0].body.contents[1].role, "model");

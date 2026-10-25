@@ -319,11 +319,8 @@
   function reflectionReady() {
     if (!state.reading || state.reading.result.kind === "burn") return true;
     if (guideBusy) return false;
-    const said = state.chat.some(function (message) {
-      return message.role === "player" && message.text.trim().length >= 8;
-    });
     const last = state.chat[state.chat.length - 1];
-    return said && last && last.role === "guide";
+    return answeredCount() >= 1 && last && last.role === "guide" && last.kind === "reply";
   }
 
   function follow() {
@@ -442,10 +439,35 @@
   }
 
   function openChat(square) {
-    state.chat = journalFor(square).map(function (line) {
-      return { role: "guide", text: line };
-    });
+    const lines = journalFor(square);
+    state.chat = [{ role: "guide", text: lines[0] || "", kind: "prompt", step: 0 }];
     state.guideDraft = "";
+  }
+
+  function settleChat() {
+    if (!state.reading || state.reading.result.kind === "burn") return;
+    const hasPlayer = state.chat.some(function (message) { return message.role === "player"; });
+    const shaped = state.chat.some(function (message) { return message.kind; });
+    if (!hasPlayer && !shaped) {
+      openChat(state.reading.square);
+      save();
+    }
+  }
+
+  function displayChat() {
+    const lines = state.reading ? journalFor(state.reading.square) : [];
+    return state.chat.map(function (message) {
+      if (message.kind === "prompt" && lines[message.step]) {
+        return { role: "guide", text: lines[message.step], kind: "prompt", step: message.step };
+      }
+      return message;
+    });
+  }
+
+  function answeredCount() {
+    return state.chat.filter(function (message) {
+      return message.role === "player" && message.text.trim().length >= 8;
+    }).length;
   }
 
   function noteFromChat() {
@@ -462,7 +484,7 @@
       name: nameOf(id),
       meaning: textOf(id)[0],
       description: textOf(id)[1],
-      ask: journalFor(id).join(" "),
+      ask: (journalFor(id)[0] || ""),
       link: link ? link.type : null
     };
   }
@@ -506,13 +528,19 @@
   function sendAnswer() {
     const text = state.guideDraft.trim();
     if (!text || guideBusy || !state.reading) return;
+    if (text.length < 8) {
+      state.noticeKey = "reflectFirst";
+      render();
+      return;
+    }
     const chat = state.chat;
     const square = state.reading.square;
     const player = currentPlayer();
     chat.push({ role: "player", text: text });
     state.guideDraft = "";
+    state.noticeKey = "";
     if (guideMode() === "offline") {
-      chat.push({ role: "guide", text: offlineReply(square, chat) });
+      chat.push({ role: "guide", text: mirrorOffline(chat), kind: "reply" });
       save();
       render();
       sound.soft();
@@ -521,18 +549,51 @@
     guideBusy = true;
     save();
     render();
-    askGuide({ mode: "square", name: player.name, question: player.question, square: squareInfo(square), path: pathInfo(player), chat: chat })
-      .catch(function () {
-        state.noticeKey = "guideDown";
-        return offlineReply(square, chat);
-      })
+    askGuide({ mode: "square", name: player.name, question: player.question, square: squareInfo(square), path: pathInfo(player), chat: displayChat() })
       .then(function (reply) {
         guideBusy = false;
-        if (state.chat === chat) chat.push({ role: "guide", text: reply });
+        state.guideFault = "";
+        if (state.chat === chat) chat.push({ role: "guide", text: reply, kind: "reply" });
         save();
         render();
         sound.soft();
+      })
+      .catch(function (error) {
+        guideBusy = false;
+        state.noticeKey = "guideDown";
+        state.guideFault = faultText(error);
+        if (state.chat === chat) chat.push({ role: "guide", text: liveMissed(chat), kind: "error" });
+        save();
+        render();
       });
+  }
+
+  function lastPlayerWords(chat) {
+    const said = chat.filter(function (message) { return message.role === "player"; });
+    const last = said[said.length - 1];
+    return last ? last.text.trim().replace(/\s+/g, " ").slice(0, 160) : "";
+  }
+
+  function mirrorOffline(chat) {
+    const words = lastPlayerWords(chat);
+    const lang = state.lang === "ru" ? "ru" : "en";
+    if (!words) return guideText().rest;
+    if (lang === "ru") return "Вы написали: «" + words + "». Я остаюсь с этими словами. Напишите ещё одну фразу о том, что в них живое, и тогда можно идти дальше.";
+    return "You wrote: “" + words + "”. I am staying with those words. Write one more sentence about what is alive in them, and then you can go on.";
+  }
+
+  function faultText(error) {
+    return String(error && error.message || "")
+      .replace(/AIza[0-9A-Za-z_-]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 160);
+  }
+
+  function liveMissed(chat) {
+    const words = lastPlayerWords(chat);
+    if (!words) return t("guideDown");
+    return t("guideMissed").replace("{words}", words);
   }
 
   function offlineClosing(player) {
@@ -620,6 +681,7 @@
   }
 
   function render() {
+    settleChat();
     document.documentElement.lang = state.lang;
     document.getElementById("eyebrow").textContent = t("subtitle");
     document.getElementById("title").textContent = t("title");
@@ -756,7 +818,9 @@
   }
 
   function toast() {
-    return state.noticeKey ? paragraph("toast", t(state.noticeKey)) : null;
+    if (!state.noticeKey) return null;
+    const reason = state.noticeKey === "guideDown" && state.guideFault ? " " + state.guideFault : "";
+    return paragraph("toast", t(state.noticeKey) + reason);
   }
 
   function renderSetup(panel) {
@@ -829,7 +893,7 @@
     box.appendChild(paragraph("guide-head", "✦ " + t("guideName")));
     const list = div("guide-chat");
     list.setAttribute("aria-live", "polite");
-    state.chat.forEach(function (message) {
+    displayChat().forEach(function (message) {
       list.appendChild(paragraph("msg " + message.role, message.text));
     });
     if (guideBusy) list.appendChild(paragraph("msg guide thinking", t("listening")));

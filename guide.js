@@ -5,8 +5,10 @@ const MAX_PATH = 24;
 
 const DEFAULT_MODELS = {
   openai: "gpt-4o-mini",
-  gemini: "gemini-2.0-flash"
+  gemini: "gemini-3.5-flash-lite"
 };
+
+const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash"];
 
 function providers(env) {
   const list = [];
@@ -62,12 +64,12 @@ function cleanRequest(body) {
 function systemPrompt(lang) {
   const language = lang === "ru" ? "Russian" : "English";
   return [
-    "You are sitting with one player of Leela, the Indian game of self-knowledge. You are a warm, attentive person, not a questionnaire.",
-    "Reply in " + language + " only.",
-    "The player's latest message is the center of the reply. Repeat their situation in your own words and name the feeling you hear. Do not replace it with a prepared question.",
-    "The player already sees a few observation questions for this square. Do not recite them back. After they answer, follow their words.",
-    "Ask at most one question, and only one that follows from their last sentence.",
-    "Write four to seven sentences of ordinary conversation. No lists, no headings, no emojis.",
+    "You are sitting with one player of Leela, a game of self-knowledge. You are a warm person in a real conversation, not a questionnaire and not a script.",
+    "Reply in " + language + " only. The player may write in English, Russian, or Hebrew. Understand whatever they wrote, and answer in " + language + ".",
+    "Their latest message is the whole subject. Start by quoting a short exact phrase from that message, in the language they used, inside quotation marks. Then say what you hear in it: the feeling, the image, or the choice.",
+    "Do not open with the square name. Do not ask them to set their question beside the square. Do not ask where they notice it in the body, what small honest step to take, or tell them to keep what they found, unless their own words were about the body, a step, or keeping something.",
+    "Ask at most one question, and only about a concrete detail they just wrote.",
+    "Write three to five sentences of ordinary conversation. No lists, no headings, no emojis.",
     "Never predict the future, diagnose, or give medical, legal, or financial advice, and do not claim spiritual authority.",
     "If the player mentions self-harm or a crisis, gently suggest talking to someone they trust or a local helpline, and stop the game reflection."
   ].join(" ");
@@ -101,7 +103,7 @@ function contextText(request) {
     lines.push("Meaning: " + square.description);
     if (square.link === "arrow") lines.push("This square holds an arrow: it lifts the player upward.");
     if (square.link === "snake") lines.push("This square holds a snake: it takes the player down.");
-    lines.push("The opening question for this square was: " + square.ask);
+    lines.push("Square background only. Do not turn this into your reply: " + square.ask);
   } else {
     lines.push("The journey is complete. Please write the closing reflection.");
   }
@@ -138,26 +140,51 @@ async function callOpenAI(request, env, fetchImpl) {
   return text.trim();
 }
 
-async function callGemini(request, env, fetchImpl) {
+function geminiModels(env) {
+  return env.LEELA_GEMINI_MODEL ? [env.LEELA_GEMINI_MODEL] : GEMINI_MODELS.slice();
+}
+
+async function callGeminiModel(model, request, env, fetchImpl) {
   const turns = conversation(request);
-  const model = env.LEELA_GEMINI_MODEL || DEFAULT_MODELS.gemini;
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: request.mode === "closing" ? closingPrompt(request.lang) : systemPrompt(request.lang) }] },
+      generationConfig: { maxOutputTokens: 600 },
       contents: turns.map(function (turn) {
         return { role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.text }] };
       })
     })
   });
   const data = await response.json().catch(function () { return {}; });
-  if (!response.ok) throw new Error("Gemini: " + ((data.error && data.error.message) || response.status));
+  if (!response.ok) {
+    const error = new Error("Gemini: " + ((data.error && data.error.message) || response.status));
+    error.status = response.status;
+    throw error;
+  }
   const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
-  const text = (parts || []).map(function (part) { return part.text || ""; }).join("");
+  const spoken = (parts || []).filter(function (part) { return !part.thought; });
+  const text = (spoken.length ? spoken : (parts || [])).map(function (part) { return part.text || ""; }).join("");
   if (!text) throw new Error("Gemini returned no text.");
   return text.trim();
+}
+
+async function callGemini(request, env, fetchImpl) {
+  const models = geminiModels(env);
+  let lastError = null;
+  for (let index = 0; index < models.length; index += 1) {
+    try {
+      return await callGeminiModel(models[index], request, env, fetchImpl);
+    } catch (error) {
+      lastError = error;
+      const missing = /not found|not supported|shut down|deprecated|no longer available/i.test(String(error && error.message));
+      if (index < models.length - 1 && (error.status === 404 || missing)) continue;
+      throw error;
+    }
+  }
+  throw lastError || new Error("Gemini returned no text.");
 }
 
 async function reply(body, env, fetchImpl) {
